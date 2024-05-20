@@ -101,7 +101,7 @@ def verificarsolicitud(tipo:str, ciiu:list, uso_del_suelo:dict):
 
 
 data = searchforsoilusestable('212-1-001-010-0013-00025-00000-00000')
-print(data)
+
 print(verificarsolicitud('Estudio', [4724, 4729], data))
 
 
