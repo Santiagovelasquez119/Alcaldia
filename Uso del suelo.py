@@ -32,7 +32,7 @@ def CEDULA_CATASTRAL(cedcatast:str):
 
 def searchforsoilusestable(cedula_catastral:str):
     BD = pd.DataFrame(
-        pd.read_excel(r'C:\Users\Santiago\PycharmProjects\pythonProject\Alcaldia\Ensayos\Mejoras\Bases de datos\Clasificacion_suelos.xlsx'),
+        pd.read_excel(r'C:\Users\Fernando.Castrillon\PycharmProjects\pythonProject\Ensayos_1\Mejoras\Bases de datos\Clasificacion_suelos.xlsx'),
         columns=['Sector', 'Principal', 'Complementario', 'Restringido', 'Prohibido', 'Clasificacion', 'Articulos'])
     resultado_busqueda = {}
     count = 1
@@ -62,7 +62,7 @@ def searchforsoilusestable(cedula_catastral:str):
 
 def verificarsolicitud(tipo:str, ciiu:list, uso_del_suelo:dict):
     if tipo == 'Estudio':
-        BD_ciiu = pd.DataFrame(pd.read_excel(r'C:\Users\Santiago\PycharmProjects\pythonProject\Alcaldia\Ensayos\Mejoras\Bases de datos\cod_actividad.xlsx'),
+        BD_ciiu = pd.DataFrame(pd.read_excel(r'C:\Users\Fernando.Castrillon\PycharmProjects\pythonProject\Ensayos_1\Mejoras\Bases de datos\cod_actividad.xlsx'),
                                columns=['Codigo', 'Descripcion', 'Tipo'])
         resultado_ciiu = {}
         for e in ciiu:
@@ -78,22 +78,31 @@ def verificarsolicitud(tipo:str, ciiu:list, uso_del_suelo:dict):
             for j in usos:
                 for w in uso_del_suelo.values():
                     for z in resultado_ciiu[i]['Tipo'].split(', '):
+                        #print(j, w[j].split(', '), z)
+                        if j == 'Prohibido':
+                            if z in w[j].split(', '):
+                                eval[f'Uso_{j}'] = 'NO APROBADO'
+                                break
+                            if w[j].split(', ') == ' ':
+                                eval[f'Uso_{j}'] = 'APROBADO'
+                                break
                         if z in w[j].split(', '):
                             eval[f'Uso_{j}'] = 'APROBADO'
-                            print('ok1')
+                            break
+                        elif ('Multiple' in w[j].split(', ')) and (z not in w['Prohibido'].split(', ')):
+                            eval[f'Uso_{j}'] = 'APROBADO'
                             break
                         else:
                             eval[f'Uso_{j}'] = 'NO APROBADO'
-                            #print(eval)
-                        #print(j, w[j].split(', '), z)
-            print('ciclo terminado')
 
-            return eval
+            resultado[i] = eval
 
+        return resultado
 
 
-data = searchforsoilusestable('212-2-001-000-0013-00025-00000-00000')
-print(verificarsolicitud('Estudio', [4711, 4719], data))
+data = searchforsoilusestable('212-1-001-010-0013-00025-00000-00000')
+print(data)
+print(verificarsolicitud('Estudio', [4724, 4729], data))
 
 
 
