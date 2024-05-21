@@ -4,7 +4,7 @@ def CEDULA_CATASTRAL(cedcatast:str):
     dic = {'MUNICIPIO': {212: 'COPACABANA'},
            'SECTOR': {1: 'Urbano', 2: 'Rural'},
            'BARRIO': {1: 'SAN JUAN', 2: 'MARIA', 3: 'TABLAZO-CANOAS', 4: 'EL MOJON', 5: 'FATIMA', 6: 'LA PEDRERA',
-                      7: 'SAN FRANCISCO', 8: 'MIRAFLOREZ', 9: 'CRISTO REY', 10: 'EL RECREO', 11: 'EL OBRERO',
+                      7: 'SAN FRANCISCO', 8: 'MIRAFLORES', 9: 'CRISTO REY', 10: 'EL RECREO', 11: 'EL OBRERO',
                       12: 'SIMON BOLIVAR', 13: 'TOBON QUINTERO', 14: 'YARUMITO', 15: 'LAS VEGAS', 16: 'LA ASUNCION',
                       17: 'LA AZULITA', 18: 'CORREDOR MULTIPLE', 19: 'PORVENIR', 20: 'EL PEDREGAL', 21: 'EL REMANSO',
                       22: 'LA MISERICORDIA', 23: 'MACHADO', 24: 'VILLANUEVA'},
@@ -32,7 +32,7 @@ def CEDULA_CATASTRAL(cedcatast:str):
 
 def searchforsoilusestable(cedula_catastral:str):
     BD = pd.DataFrame(
-        pd.read_excel(r'C:\Users\Fernando.Castrillon\PycharmProjects\pythonProject\Ensayos_1\Mejoras\Bases de datos\Clasificacion_suelos.xlsx'),
+        pd.read_excel(r'C:\Users\Santiago\PycharmProjects\pythonProject\Alcaldia\Ensayos\Mejoras\Bases de datos\Clasificacion_suelos.xlsx'),
         columns=['Sector', 'Principal', 'Complementario', 'Restringido', 'Prohibido', 'Clasificacion', 'Articulos'])
     resultado_busqueda = {}
     count = 1
@@ -60,16 +60,16 @@ def searchforsoilusestable(cedula_catastral:str):
                                                                    'Restringido': i[3], 'Prohibido': i[4],
                                                                    'Clasificacion': i[5], 'Articulos': i[6]}}
 
+
 def verificarsolicitud(tipo:str, ciiu:list, uso_del_suelo:dict):
     if tipo == 'Estudio':
-        BD_ciiu = pd.DataFrame(pd.read_excel(r'C:\Users\Fernando.Castrillon\PycharmProjects\pythonProject\Ensayos_1\Mejoras\Bases de datos\cod_actividad.xlsx'),
+        BD_ciiu = pd.DataFrame(pd.read_excel(r'C:\Users\Santiago\PycharmProjects\pythonProject\Alcaldia\Ensayos\Mejoras\Bases de datos\cod_actividad.xlsx'),
                                columns=['Codigo', 'Descripcion', 'Tipo'])
         resultado_ciiu = {}
         for e in ciiu:
             for i in BD_ciiu.values:
                 if e == i[0]:
                     resultado_ciiu[e] = {'Descripcion': i[1], 'Tipo': i[2]}
-
 
         usos = ["Principal", "Complementario", "Restringido", "Prohibido"]
         resultado = {}
@@ -83,7 +83,10 @@ def verificarsolicitud(tipo:str, ciiu:list, uso_del_suelo:dict):
                             if z in w[j].split(', '):
                                 eval[f'Uso_{j}'] = 'NO APROBADO'
                                 break
-                            if w[j].split(', ') == ' ':
+                            if ' ' in w[j].split(', '):
+                                eval[f'Uso_{j}'] = 'APROBADO'
+                                break
+                            if z not in w[j].split(', '):
                                 eval[f'Uso_{j}'] = 'APROBADO'
                                 break
                         if z in w[j].split(', '):
@@ -94,15 +97,16 @@ def verificarsolicitud(tipo:str, ciiu:list, uso_del_suelo:dict):
                             break
                         else:
                             eval[f'Uso_{j}'] = 'NO APROBADO'
-
             resultado[i] = eval
-
         return resultado
+    else:
+        return uso_del_suelo
 
 
-data = searchforsoilusestable('212-1-001-010-0013-00025-00000-00000')
-
-print(verificarsolicitud('Estudio', [4724, 4729], data))
+data = searchforsoilusestable('212-1-001-008-0013-00025-00000-00000')
+print(data)
+print(pd.DataFrame(data))
+print(pd.DataFrame(verificarsolicitud('Estudio', [4724, 101], data)))
 
 
 
