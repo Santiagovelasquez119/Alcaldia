@@ -1,4 +1,6 @@
 #coding:utf-8
+import datetime
+
 import pandas as pd
 def CEDULA_CATASTRAL(cedcatast:str):
     dic = {'MUNICIPIO': {212: 'COPACABANA'},
@@ -12,6 +14,7 @@ def CEDULA_CATASTRAL(cedcatast:str):
                       6: 'CONVENTO', 7: 'FONTIDUEÑO', 8: 'MONTAÑITA', 9: 'EL SALADO', 10: 'ALVARADO', 11: 'ANCON',
                       12: 'ZARZAL CURAZAO', 13: 'EL NORAL', 14: 'LA VETA', 15: 'ZARZAL LA LUZ'}}
     partes = cedcatast.split('-')
+
     municipio, sector, corregimiento = int(partes[0]), int(partes[1]), int(partes[2])
     barrio, manz_vere, predio = int(partes[3]), int(partes[4]), int(partes[5])
     edificio, und_pred = int(partes[6]), int(partes[7])
@@ -51,63 +54,124 @@ def searchforsoilusestable(cedula_catastral:str):
                 if i[0] == resultado_busqueda[int(e)]:
                     usos_del_suelo[f'{resultado_busqueda[int(e)]}']={'Principal': i[1], 'Complementario': i[2],
                                                                      'Restringido': i[3], 'Prohibido': i[4],
-                                                                     'Clasificacion': i[5], 'Articulos': i[6]}
+                                                                     'Clasificacion': i[5]}
         return usos_del_suelo
     else:
         for i in BD.values:
             if resultado_busqueda[1] == i[0]:
                 return {resultado_busqueda[1]: {'Principal': i[1], 'Complementario': i[2],
                                                                    'Restringido': i[3], 'Prohibido': i[4],
-                                                                   'Clasificacion': i[5], 'Articulos': i[6]}}
+                                                                   'Clasificacion': i[5]}}
 
+def estudio_solicitud(ciiu:list, usos_del_suelo:dict):
+    BD_usosuelo = pd.DataFrame(
+        pd.read_excel(
+            r'C:\Users\Santiago\PycharmProjects\pythonProject\Alcaldia\Ensayos\Mejoras\Bases de datos\Clasificacion_suelos.xlsx'),
+        columns=['Sector', 'Principal', 'Complementario', 'Restringido', 'Prohibido', 'Clasificacion', 'Articulos'])
 
-def verificarsolicitud(tipo:str, ciiu:list, uso_del_suelo:dict):
-    if tipo == 'Estudio':
-        BD_ciiu = pd.DataFrame(pd.read_excel(r'C:\Users\Santiago\PycharmProjects\pythonProject\Alcaldia\Ensayos\Mejoras\Bases de datos\cod_actividad.xlsx'),
-                               columns=['Codigo', 'Descripcion', 'Tipo'])
-        resultado_ciiu = {}
-        for e in ciiu:
-            for i in BD_ciiu.values:
-                if e == i[0]:
-                    resultado_ciiu[e] = {'Descripcion': i[1], 'Tipo': i[2]}
+    BD_ciiu = pd.DataFrame(pd.read_excel(
+        r'C:\Users\Santiago\PycharmProjects\pythonProject\Alcaldia\Ensayos\Mejoras\Bases de datos\cod_actividad.xlsx'),
+                           columns=['Codigo', 'Descripcion', 'Tipo'])
+    resp = {}
+    for a in usos_del_suelo:
+        principal = list()
+        complementario = list()
+        restringido = list()
+        prohibido = list()
 
-        usos = ["Principal", "Complementario", "Restringido", "Prohibido"]
-        resultado = {}
-        for i in resultado_ciiu.keys():
-            eval = {}
-            for j in usos:
-                for w in uso_del_suelo.values():
-                    for z in resultado_ciiu[i]['Tipo'].split(', '):
-                        #print(j, w[j].split(', '), z)
-                        if j == 'Prohibido':
-                            if z in w[j].split(', '):
-                                eval[f'Uso_{j}'] = 'NO APROBADO'
+        for b in BD_usosuelo.values:
+            if a == b[0]:
+                principal, complementario, restringido, prohibido = b[1].split(', '), b[2].split(', '), b[3].split(', '), b[4].split(', ')
+
+        dic_ciiu = {}
+        for c in ciiu:
+            for d in BD_ciiu.values:
+                if c == d[0]:
+                    for e in d[2].split(', '):
+                        if e not in prohibido:
+                            if 'Multiple' in restringido:
+                                dic_ciiu[c] = 'APROBADO USO RESTRINGIDO'
                                 break
-                            if ' ' in w[j].split(', '):
-                                eval[f'Uso_{j}'] = 'APROBADO'
+                            elif e in restringido:
+                                dic_ciiu[c] = 'APROBADO USO RESTRINGIDO'
                                 break
-                            if z not in w[j].split(', '):
-                                eval[f'Uso_{j}'] = 'APROBADO'
+                            elif 'Multiple' in complementario:
+                                dic_ciiu[c] = 'APROBADO USO COMPLEMENTARIO'
                                 break
-                        if z in w[j].split(', '):
-                            eval[f'Uso_{j}'] = 'APROBADO'
-                            break
-                        elif ('Multiple' in w[j].split(', ')) and (z not in w['Prohibido'].split(', ')):
-                            eval[f'Uso_{j}'] = 'APROBADO'
-                            break
+                            elif e in complementario:
+                                dic_ciiu[c] = 'APROBADO USO COMPLEMENTARIO'
+                                break
+                            elif 'Multiple' in principal:
+                                dic_ciiu[c] = 'APROBADO USO PRINCIPAL'
+                                break
+                            elif e in principal:
+                                dic_ciiu[c] = 'APROBADO USO PRINCIPAL'
+                                break
                         else:
-                            eval[f'Uso_{j}'] = 'NO APROBADO'
-            resultado[i] = eval
-        return resultado
-    else:
-        return uso_del_suelo
+                            dic_ciiu[c] = 'NO APROBADO'
+        resp[a] = dic_ciiu
+    return resp
+
+def setciiuNoAprobado(dic_ciiu:dict):
+    ciiu_den = input('Ingrese los codigos de actividad: ').split(', ')
+    if len(dic_ciiu) >= 2:
+        usos = input('Ingrese los usos del suelo: ').split(', ')
+        for a in usos:
+            for b in ciiu_den:
+                dic_ciiu[a][int(b)] = 'NO APROBADO'
+    return pd.DataFrame(dic_ciiu)
 
 
-data = searchforsoilusestable('212-1-001-008-0013-00025-00000-00000')
-print(data)
-print(pd.DataFrame(data))
-print(pd.DataFrame(verificarsolicitud('Estudio', [4724, 101], data)))
+def excepciones(usos_del_suelo:dict, ciiu_dict:dict):
+    casos = input('Ingrese las restricciones: ').split(', ')
+    BD_Articulos = pd.DataFrame(
+        pd.read_excel(r'C:\Users\Santiago\PycharmProjects\pythonProject\Alcaldia\Ensayos\Mejoras\Bases de datos\Articulos.xlsx'),
+        columns=['Numero', 'Articulo', 'CIIU'])
+    exceptions = ''
+    for a in casos:
+        for b in BD_Articulos.values:
+            if a == b[0]:
+                pass
 
+
+def llenar_formato(nombre_usuario:str, Id:str, celular:str, direccion_notif:str, mail:str, num_rad:str,
+                   fecha_rad:datetime.time, ced_catast:str, matr_inm:str, direccion:str, razon_social:str,
+                   uso_del_suelo:dict, resp_ciiu:dict):
+    from docxtpl import DocxTemplate
+    formato = DocxTemplate(r'C:\Users\Santiago\PycharmProjects\pythonProject\Alcaldia\Ensayos\Mejoras\Formatos\Formato_Comercial.docx')
+    arts = ''
+    replace = {'usos_del_suelo':pd.DataFrame(uso_del_suelo),
+               'resp_ciiu': pd.DataFrame(resp_ciiu)}
+    formato.render(replace)
+    formato.save(
+        rf'C:\Users\Santiago\OneDrive - Universidad Nacional de Colombia\Escritorio\Alcaldía de Copacabana\2024\USOS DE SUELOS\UsoSueloComercial_{nombre_usuario}_{num_rad}.docx')
+
+
+
+##Información de notificación del usuario
+nombre_usuario = 'PEPITO PEREZ'
+Id = '1001016888'
+Celular = '3023302896'
+Direccion_notif = 'CR 64 N 47-81'
+Mail = 'SANTIAGOVELAS119@GMAIL.COM'
+Radicado = '4563'
+fecha_rad = datetime.date(2024, 3, 4)
+
+## Informacion del predio objeto de la solicitud ##
+Cedula_Catastral = '212-2-001-000-0013-00025-00000-00000'
+Matricula = '012-35669'
+Direccion_predio = 'VDA EL NORAL'
+
+## Informacion de la actividad y razon social
+Servicio = [7490, 7320]
+Razon_social = 'RAZON SOCIAL'
+
+uso_suelo = searchforsoilusestable(Cedula_Catastral)
+estudio = estudio_solicitud(Servicio, uso_suelo.keys())
+print(uso_suelo)
+print(estudio)
+llenar_formato(nombre_usuario, Id, Celular, Direccion_notif, Mail, Radicado, fecha_rad, Cedula_Catastral, Matricula,
+               Direccion_predio, Razon_social, uso_suelo, estudio)
 
 
 
